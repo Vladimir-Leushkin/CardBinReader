@@ -10,9 +10,9 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
     </parent>
 
     <groupId>com.myproject</groupId>
-    <artifactId>card-bin-reader</artifactId>
+    <artifactId>cardFull-bin-reader</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <name>card-bin-reader</name>
+    <name>cardFull-bin-reader</name>
 
     <properties>
     <java.vertion>11</java.vertion>

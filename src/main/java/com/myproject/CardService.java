@@ -8,6 +8,8 @@ import com.myproject.exception.NotFoundException;
 import com.myproject.exception.ValidationException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import javax.transaction.Transactional;
@@ -16,6 +18,9 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -28,14 +33,14 @@ public class CardService {
     private final static Integer MINCARDMUMBER = 8;
     private final static Integer MAXCARDMUMBER = 16;
 
-    public Card getCardInformation(String cardNumber){
+    public CardFull getCardInformation(String cardNumber){
         URI uri = URI.create("https://lookup.binlist.net/" + getBin(cardNumber));
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(uri)
                 .GET()
                 .build();
 
-        Card card = null;
+        CardFull cardFull = null;
         try {
             HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
             if (response.statusCode() == 200) {
@@ -44,8 +49,8 @@ public class CardService {
                     throw new NotFoundException("Card number not found");
                 }
                 JsonObject jsonObject = jsonElement.getAsJsonObject();
-                card = new Gson().fromJson(jsonObject, Card.class);
-                saveCard(createCardDto(card, getCardNumber(cardNumber)));
+                cardFull = new Gson().fromJson(jsonObject, CardFull.class);
+                saveCard(createCard(cardFull, getCardNumber(cardNumber)));
             } else {
                 throw new ValidationException("Error card number");
             }
@@ -54,21 +59,21 @@ public class CardService {
         }catch (NullPointerException e){
             throw new NotFoundException("Card number not found");
         }
-        return card;
+        return cardFull;
     }
 
-    public CardDto createCardDto(Card card, Long cardNumber){
-        return new CardDto(
+    public Card createCard(CardFull cardFull, Long cardNumber){
+        return new Card(
                 cardNumber,
-                card.getCountry().getName(),
-                card.getBank().getCity(),
-                card.getBank().getUrl(),
-                card.getBank().getPhone()
+                cardFull.getCountry().getName(),
+                cardFull.getBank().getCity(),
+                cardFull.getBank().getUrl(),
+                cardFull.getBank().getPhone()
         );
     }
 
-    public void saveCard(CardDto cardDto){
-        cardRepository.save(cardDto);
+    public void saveCard(Card card){
+        cardRepository.save(card);
     }
 
     public Integer getBin(String cardNumber){
@@ -83,5 +88,33 @@ public class CardService {
             return Long.parseLong(cardNumber);
         }
         throw new ValidationException("Error card number length");
+    }
+
+    public List<Bank> getAllBanks(Integer from, Integer size) {
+        //PageRequest page = pagination(from, size);
+        List<Card> cards = new ArrayList<>();
+        cards = cardRepository.findAll();
+        List<Bank> bankDto = new ArrayList<>();
+        bankDto = cards.stream().map(card ->mappingBankDto(card)).collect(Collectors.toList());
+        return bankDto;
+    }
+
+    private PageRequest pagination(int from, int size) {
+        int page = from < size ? 0 : from / size;
+        return PageRequest.of(page, size, Sort.unsorted());
+    }
+
+    public Bank mappingBankDto(Card card){
+        String[] urlName = card.getUrl().split("\\.");
+        String name = "";
+        if (urlName.length >= 3){
+            name = urlName[1];
+        }
+        return new Bank(
+                name,
+                card.getUrl(),
+                card.getPhone(),
+                card.getCity()
+        );
     }
 }
