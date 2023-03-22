@@ -36,12 +36,13 @@ public class CardService {
 
     public CardFull getCardInformation(String cardNumber){
         URI uri = URI.create("https://lookup.binlist.net/" + getBin(cardNumber));
+        log.info("Отправлен запрос : {}", uri);
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(uri)
                 .GET()
                 .build();
 
-        CardFull cardFull = null;
+        CardFull cardFull;
         try {
             HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
             if (response.statusCode() == 200) {
@@ -60,6 +61,7 @@ public class CardService {
         }catch (NullPointerException e){
             throw new NotFoundException("Card number not found");
         }
+        log.info("Получены данные карты : {}", cardFull);
         return cardFull;
     }
 
@@ -75,11 +77,13 @@ public class CardService {
     }
 
     public void saveCard(Card card){
+        log.info("Сохранены данные карты : {}", card);
         cardRepository.save(card);
     }
 
     public Integer getBin(String cardNumber){
         if (cardNumber.length() >= MINCARDMUMBER){
+            log.info("Получен bin из карты : {}", cardNumber);
             return Integer.parseInt(cardNumber.substring(0, MINCARDMUMBER));
         }
         throw new ValidationException("Error card number length");
@@ -87,6 +91,7 @@ public class CardService {
 
     public Long getCardNumber(String cardNumber){
         if (cardNumber.length() >= MINCARDMUMBER && cardNumber.length() <= MAXCARDMUMBER){
+            log.info("Получен номер карты : {}", cardNumber);
             return Long.parseLong(cardNumber);
         }
         throw new ValidationException("Error card number length");
@@ -97,7 +102,8 @@ public class CardService {
         List<Card> cards;
         cards = cardRepository.findAll(page).toList();
         List<Bank> bankDto;
-        bankDto = cards.stream().map(card ->mappingBankDto(card)).collect(Collectors.toList());
+        bankDto = cards.stream().map(this::mappingBankDto).collect(Collectors.toList());
+        log.info("Получен список банков : {}", bankDto);
         return bankDto;
     }
 
