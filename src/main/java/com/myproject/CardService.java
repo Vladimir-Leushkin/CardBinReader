@@ -18,6 +18,7 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -65,6 +66,7 @@ public class CardService {
     public Card createCard(CardFull cardFull, Long cardNumber){
         return new Card(
                 cardNumber,
+                cardFull.getBank().getName(),
                 cardFull.getCountry().getName(),
                 cardFull.getBank().getCity(),
                 cardFull.getBank().getUrl(),
@@ -91,10 +93,10 @@ public class CardService {
     }
 
     public List<Bank> getAllBanks(Integer from, Integer size) {
-        //PageRequest page = pagination(from, size);
-        List<Card> cards = new ArrayList<>();
-        cards = cardRepository.findAll();
-        List<Bank> bankDto = new ArrayList<>();
+        PageRequest page = pagination(from, size);
+        List<Card> cards;
+        cards = cardRepository.findAll(page).toList();
+        List<Bank> bankDto;
         bankDto = cards.stream().map(card ->mappingBankDto(card)).collect(Collectors.toList());
         return bankDto;
     }
@@ -105,13 +107,8 @@ public class CardService {
     }
 
     public Bank mappingBankDto(Card card){
-        String[] urlName = card.getUrl().split("\\.");
-        String name = "";
-        if (urlName.length >= 3){
-            name = urlName[1];
-        }
         return new Bank(
-                name,
+                card.getName(),
                 card.getUrl(),
                 card.getPhone(),
                 card.getCity()
